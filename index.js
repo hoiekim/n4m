@@ -1,74 +1,113 @@
-const maxApi = require("max-api");
+const Max = require("max-api");
 const {
   getBase,
   scale,
   setScale,
   addNoteToScale,
-  getTriad
+  getTriad,
+  midiToNoteName,
+  midiToAbsoluteNoteName
 } = require("./lib/chords");
 
 const notesCache = {};
 
-let base, sustain;
+const getPlayedNotes = () => {
+  const notes = [];
+  for (const key in notesCache) {
+    notes.push(Number(key));
+  }
+  return notes;
+};
 
-maxApi.addHandler("key", (note, velocity) => {
+let base;
+let triad = [];
+let sustain;
+
+const getTensions = (notes) => {
+  const safeNotes = triad.filter((e) => {
+    return notes.reduce((acc, f) => {
+      const interval = Math.abs(e - f);
+      return !(!acc || (interval < 3 && interval));
+    }, true);
+  });
+  Max.outlet("safeNotes", ...safeNotes);
+  Max.outlet("safeNotesNames", ...safeNotes.map(midiToNoteName));
+
+  const tensionNotes = notes.filter((e) => {
+    return !triad.find((f) => {
+      return e % 12 === f % 12;
+    });
+  });
+  if (tensionNotes.length) {
+    Max.outlet("tensionNotes", ...tensionNotes);
+    Max.outlet("tensionNotesNames", ...tensionNotes.map(midiToNoteName));
+  } else {
+    Max.outlet("tensionNotes", "unknown");
+    Max.outlet("tensionNotesNames", "unknown");
+  }
+};
+
+Max.addHandler("key", (note, velocity) => {
   if (!velocity) {
     delete notesCache[note];
-    const notes = Object.keys(notesCache);
+    const notes = getPlayedNotes();
+
     if (!notes.length && !sustain) {
-      maxApi.outlet("base", base, 0);
+      Max.outlet("base", base, 0);
+      Max.outlet("baseName", "unknown");
       base = null;
     }
+
+    getTensions(notes);
   } else {
     notesCache[note] = velocity;
     addNoteToScale(note);
-    maxApi.outlet("scale", ...scale);
-    const notes = Object.keys(notesCache).map(Number);
+    Max.outlet("scale", ...scale);
+    Max.outlet("scaleNames", ...scale.map(midiToAbsoluteNoteName));
+    const notes = getPlayedNotes();
     notes.sort((a, b) => a - b);
 
-    maxApi.outlet("keys", ...notes);
+    Max.outlet("keys", ...notes);
+    Max.outlet("keys", ...notes.map(midiToNoteName));
 
     const newBase = getBase(notes);
     if (base !== newBase) {
-      maxApi.outlet("base", base, 0);
+      Max.outlet("base", base, 0);
 
-      const values = Object.values(notesCache);
-      const velocity = values.reduce((acc, e) => acc + e) / values.length;
-      maxApi.outlet("base", newBase, velocity);
+      let velocity = 0;
+      let length = 0;
+      for (const key in notesCache) {
+        velocity += notesCache[key];
+        length++;
+      }
+      velocity = velocity / length;
+      Max.outlet("base", newBase, velocity);
+      Max.outlet("baseName", midiToNoteName(newBase));
 
-      const triad = getTriad(newBase);
-      maxApi.outlet("triad", ...triad);
-
-      const safeNotes = triad.filter((e) => {
-        return notes.reduce((acc, f) => {
-          const interval = Math.abs((e % 12) - (f % 12));
-          return !(!acc || (interval < 3 && interval));
-        }, true);
-      });
-      maxApi.outlet("safeNotes", ...safeNotes);
-
-      const tensionNotes = notes.filter((e) => {
-        return !triad.find((f) => {
-          return e % 12 === f % 12;
-        });
-      });
-      maxApi.outlet("tensionNotes", ...tensionNotes);
+      const newTriad = getTriad(newBase);
+      Max.outlet("triad", ...newTriad);
+      Max.outlet("triadNames", ...newTriad.map(midiToNoteName));
 
       base = newBase;
+      triad = newTriad;
     }
+
+    getTensions(notes);
   }
 });
 
-maxApi.addHandler("scale", (note) => {
+Max.addHandler("scale", (note) => {
   setScale(note);
-  maxApi.outlet("scale", ...scale);
+  Max.outlet("scale", ...scale);
+  Max.outlet("scaleNames", ...scale.map(midiToAbsoluteNoteName));
 });
 
-maxApi.addHandler("sustain", (value) => {
+Max.addHandler("sustain", (value) => {
   if (value) sustain = true;
   else {
     if (!Object.keys(notesCache).length) {
-      maxApi.outlet("base", base, 0);
+      Max.outlet("base", base, 0);
+      Max.outlet("baseName", "unknown");
     }
     sustain = false;
   }
