@@ -9,106 +9,182 @@ const {
   midiToAbsoluteNoteName
 } = require("./lib/chords");
 
+let base;
+let triad = [];
+let safeNotes = [];
+let tension = [];
+let sustain = false;
+let velocityAvg = 0;
+let scaleLock = false;
+
 const notesCache = {};
 
+// Get all currently played notes from cache.
 const getPlayedNotes = () => {
   const notes = [];
   for (const key in notesCache) {
     notes.push(Number(key));
   }
+  notes.sort((a, b) => a - b);
   return notes;
 };
 
-let base;
-let triad = [];
-let sustain;
+// Send scale outlet to max.
+const outletScale = () => {
+  Max.outlet("scale", ...scale);
+  Max.outlet("scaleNames", ...scale.map(midiToAbsoluteNoteName));
+};
 
-const getTensions = (notes) => {
-  const safeNotes = triad.filter((e) => {
+// Send base and triad outlet to max.
+const outletBaseTriad = (notes) => {
+  const newBase = getBase(notes);
+  if (base !== newBase) {
+    Max.outlet("base", base, 0);
+
+    let velocitySum = 0;
+    let length = 0;
+    for (const key in notesCache) {
+      velocitySum += notesCache[key];
+      length++;
+    }
+    velocityAvg = velocitySum / length;
+    Max.outlet("velocity", velocityAvg);
+
+    base = newBase;
+    Max.outlet("base", base, velocityAvg);
+    Max.outlet("baseName", midiToNoteName(base));
+
+    triad.forEach((e) => Max.outlet("triad", e, 0));
+    triad = getTriad(newBase);
+    triad.forEach((e) => Max.outlet("triad", e, velocityAvg));
+    Max.outlet("triadNames", ...triad.map(midiToNoteName));
+  }
+};
+
+// Send tension and safeNotes outlet to max.
+const outletTensions = (notes) => {
+  // Get new safeNotes.
+  const newSafeNotes = triad.filter((e) => {
     return notes.reduce((acc, f) => {
-      const interval = Math.abs(e - f);
-      return !(!acc || (interval < 3 && interval));
+      const interval = e - f;
+      const intervalAbs = Math.abs(interval);
+      return !(
+        !acc ||
+        (intervalAbs < 3 && intervalAbs) ||
+        (9 < interval && interval < 15 && interval !== 12)
+      );
     }, true);
   });
-  Max.outlet("safeNotes", ...safeNotes);
-  Max.outlet("safeNotesNames", ...safeNotes.map(midiToNoteName));
 
-  const tensionNotes = notes.filter((e) => {
+  // Note-off previously played safeNotes.
+  safeNotes.forEach((e) => {
+    if (!newSafeNotes.find((f) => e === f)) Max.outlet("safeNotes", e, 0);
+  });
+
+  // Play updated safeNotes.
+  newSafeNotes.forEach((e) => {
+    if (!safeNotes.find((f) => e === f))
+      Max.outlet("safeNotes", e, velocityAvg);
+  });
+
+  // Display safeNotes with note names.
+  if (newSafeNotes.length) {
+    Max.outlet("safeNotesNames", ...newSafeNotes.map(midiToNoteName));
+  } else {
+    Max.outlet("safeNotesNames", "unknown");
+  }
+
+  // Update cached safeNotes with the new one.
+  safeNotes = newSafeNotes;
+
+  // Update tension.
+  const newTension = notes.filter((e) => {
     return !triad.find((f) => {
       return e % 12 === f % 12;
     });
   });
-  if (tensionNotes.length) {
-    Max.outlet("tensionNotes", ...tensionNotes);
-    Max.outlet("tensionNotesNames", ...tensionNotes.map(midiToNoteName));
-  } else {
-    Max.outlet("tensionNotes", "unknown");
-    Max.outlet("tensionNotesNames", "unknown");
+
+  // Note-off previously played tension.
+  if (!sustain) {
+    tension.forEach((e) => {
+      if (!newTension.find((f) => e === f)) Max.outlet("tension", e, 0);
+    });
   }
+
+  // Play updated tension.
+  newTension.forEach((e) => {
+    if (!tension.find((f) => e === f)) Max.outlet("tension", e, notesCache[e]);
+  });
+
+  // Display tension with note names.
+  if (newTension.length) {
+    Max.outlet("tensionNames", ...newTension.map(midiToNoteName));
+  } else {
+    Max.outlet("tensionNames", "unknown");
+  }
+
+  // Update cached tension with the new one.
+  if (sustain) tension = [...tension, ...newTension];
+  else tension = newTension;
 };
 
+// Note off all notes.
+const noteOffAll = () => {
+  velocityAvg = 0;
+  Max.outlet("velocity", velocityAvg);
+  Max.outlet("base", base, velocityAvg);
+  base = null;
+  tension.forEach((e) => Max.outlet("tension", e, velocityAvg));
+  safeNotes.forEach((e) => Max.outlet("safeNotes", e, velocityAvg));
+  triad.forEach((e) => Max.outlet("triad", e, velocityAvg));
+};
+
+// Detect key input and analyze chords.
 Max.addHandler("key", (note, velocity) => {
   if (!velocity) {
+    // If input is note-off input:
     delete notesCache[note];
     const notes = getPlayedNotes();
-
-    if (!notes.length && !sustain) {
-      Max.outlet("base", base, 0);
-      Max.outlet("baseName", "unknown");
-      base = null;
+    if (!notes.length && !sustain) noteOffAll();
+    else {
+      outletTensions(notes);
+      if (notes[0] < 48) outletBaseTriad(notes);
     }
-
-    getTensions(notes);
   } else {
+    // If input is note-on input:
     notesCache[note] = velocity;
-    addNoteToScale(note);
-    Max.outlet("scale", ...scale);
-    Max.outlet("scaleNames", ...scale.map(midiToAbsoluteNoteName));
-    const notes = getPlayedNotes();
-    notes.sort((a, b) => a - b);
 
-    Max.outlet("keys", ...notes);
-    Max.outlet("keys", ...notes.map(midiToNoteName));
-
-    const newBase = getBase(notes);
-    if (base !== newBase) {
-      Max.outlet("base", base, 0);
-
-      let velocity = 0;
-      let length = 0;
-      for (const key in notesCache) {
-        velocity += notesCache[key];
-        length++;
-      }
-      velocity = velocity / length;
-      Max.outlet("base", newBase, velocity);
-      Max.outlet("baseName", midiToNoteName(newBase));
-
-      const newTriad = getTriad(newBase);
-      Max.outlet("triad", ...newTriad);
-      Max.outlet("triadNames", ...newTriad.map(midiToNoteName));
-
-      base = newBase;
-      triad = newTriad;
+    if (!scaleLock) {
+      // Update scale if scaleLock is not active.
+      addNoteToScale(note);
+      outletScale();
     }
 
-    getTensions(notes);
+    const notes = getPlayedNotes();
+
+    outletBaseTriad(notes);
+    outletTensions(notes);
   }
 });
 
+// Detect input forcely changes scale.
 Max.addHandler("scale", (note) => {
   setScale(note);
-  Max.outlet("scale", ...scale);
-  Max.outlet("scaleNames", ...scale.map(midiToAbsoluteNoteName));
+  outletScale();
 });
 
+// Detect scale lock input.
+Max.addHandler("scaleLock", (value) => {
+  scaleLock = !!value;
+});
+
+// Detect sustain pedal input.
 Max.addHandler("sustain", (value) => {
   if (value) sustain = true;
   else {
-    if (!Object.keys(notesCache).length) {
-      Max.outlet("base", base, 0);
-      Max.outlet("baseName", "unknown");
-    }
     sustain = false;
+    const notes = getPlayedNotes();
+    if (!notes.length) noteOffAll();
+    else outletTensions(notes);
   }
 });
