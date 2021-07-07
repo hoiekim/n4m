@@ -69,15 +69,11 @@ const stopPlaying = () => {
   playing = false;
 };
 
-const setPlaying = (velocity) => {
-  if (!transport) {
-    const newNotes = Object.keys(notesCahce).length;
-    if (!velocity && !newNotes) stopPlaying();
-    else if (!playing) {
-      playingBeat = 0;
-      startPlaying();
-    }
-  } else if (!playing) {
+const setPlaying = () => {
+  const newNotes = Object.keys(notesCahce).length;
+  if (!newNotes) stopPlaying();
+  else if (!playing) {
+    if (!transport && newNotes) playingBeat = 0;
     startPlaying();
   }
 };
@@ -99,7 +95,7 @@ Max.addHandler("bpm", (value) => {
 
 Max.addHandler("transport", (value) => {
   transport = !!value;
-  setPlaying(1);
+  setPlaying();
 });
 
 Max.addHandler("tempo", (value) => {
@@ -120,7 +116,7 @@ Max.addHandler("base", (value, velocity) => {
     base = value;
   } else delete notesCahce[value];
 
-  setPlaying(velocity);
+  setPlaying();
 });
 
 Max.addHandler("triadNumbers", (...numbers) => {
