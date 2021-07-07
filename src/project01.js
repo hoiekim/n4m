@@ -7,7 +7,7 @@ const {
   getTriad,
   midiToNoteName,
   midiToAbsoluteNoteName
-} = require("./lib/chords");
+} = require("../lib/chords");
 
 let base;
 let triad = [];
@@ -39,8 +39,6 @@ const outletScale = () => {
 const outletBaseTriad = (notes) => {
   const newBase = getBase(notes);
   if (base !== newBase) {
-    Max.outlet("base", base, 0);
-
     let velocitySum = 0;
     let length = 0;
     for (const key in notesCache) {
@@ -50,14 +48,18 @@ const outletBaseTriad = (notes) => {
     velocityAvg = velocitySum / length;
     Max.outlet("velocity", velocityAvg);
 
-    base = newBase;
-    Max.outlet("base", base, velocityAvg);
-    Max.outlet("baseName", midiToNoteName(base));
+    Max.outlet("base", newBase, velocityAvg);
+    Max.outlet("baseNumber", newBase);
+    Max.outlet("baseName", midiToNoteName(newBase));
+    Max.outlet("base", base, 0);
 
     triad.forEach((e) => Max.outlet("triad", e, 0));
     triad = getTriad(newBase);
     triad.forEach((e) => Max.outlet("triad", e, velocityAvg));
+    Max.outlet("triadNumbers", ...triad);
     Max.outlet("triadNames", ...triad.map(midiToNoteName));
+
+    base = newBase;
   }
 };
 
@@ -89,8 +91,10 @@ const outletTensions = (notes) => {
 
   // Display safeNotes with note names.
   if (newSafeNotes.length) {
+    Max.outlet("safeNotesNumbers", ...newSafeNotes);
     Max.outlet("safeNotesNames", ...newSafeNotes.map(midiToNoteName));
   } else {
+    Max.outlet("safeNotesNumbers", "unknown");
     Max.outlet("safeNotesNames", "unknown");
   }
 
@@ -100,7 +104,7 @@ const outletTensions = (notes) => {
   // Update tension.
   const newTension = notes.filter((e) => {
     return !triad.find((f) => {
-      return e % 12 === f % 12;
+      return e % 12 === f % 12 && e < 72;
     });
   });
 
@@ -118,8 +122,10 @@ const outletTensions = (notes) => {
 
   // Display tension with note names.
   if (newTension.length) {
+    Max.outlet("tensionNumbers", ...newTension);
     Max.outlet("tensionNames", ...newTension.map(midiToNoteName));
   } else {
+    Max.outlet("tensionNumbers", "unknown");
     Max.outlet("tensionNames", "unknown");
   }
 
