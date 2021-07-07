@@ -48,8 +48,10 @@ const startPlaying = () => {
   });
 
   playingTimer = setTimeout(() => {
-    if (playingBeat < 15) playingBeat += 1;
-    else playingBeat = 0;
+    if (!transport) {
+      if (playingBeat < 15) playingBeat += 1;
+      else playingBeat = 0;
+    }
     startPlaying();
   }, (60000 * beatUnit) / bpm);
 
@@ -113,10 +115,10 @@ Max.addHandler("scale", (...value) => {
 });
 
 Max.addHandler("base", (value, velocity) => {
-  if (velocity) notesCahce[value] = velocity;
-  else delete notesCahce[value];
-
-  base = value;
+  if (velocity) {
+    notesCahce[value] = velocity;
+    base = value;
+  } else delete notesCahce[value];
 
   setPlaying(velocity);
 });
