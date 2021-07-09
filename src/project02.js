@@ -130,6 +130,8 @@ Max.addHandler("tensionNumbers", (...numbers) => {
 });
 
 Max.addHandler("steps", (...value) => {
+  if (value.length < 2) return;
+
   step.forEach((e, i) => {
     step[i] = [];
   });
@@ -142,3 +144,5 @@ Max.addHandler("steps", (...value) => {
     i += 2;
   }
 });
+
+Max.outlet("load", 1);
