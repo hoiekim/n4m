@@ -1,7 +1,7 @@
 const Max = require("max-api");
 
 let bpm = 120;
-let beatUnit = 1 / 4;
+let noteLength = 1 / 4;
 
 let velocityAvg = 63;
 
@@ -15,7 +15,12 @@ let scale = [60, 62, 64, 65, 67, 69, 71];
 const notesCahce = {};
 
 let chord = [];
-const step = [[], [], [], [], [], [], [], [], [], [], [], [], [], [], [], []];
+
+let stepLength = 16;
+const step = new Array(stepLength).fill(null);
+step.forEach((e, i) => {
+  step[i] = [];
+});
 
 let playing = false;
 let playingBeat = 0;
@@ -34,11 +39,15 @@ const getBaseIndex = () => {
   return baseIndex;
 };
 
-const startPlaying = () => {
+const muteAll = () => {
   for (const key in playingCache) {
     Max.outlet("note", +key, 0);
     delete playingCache[key];
   }
+};
+
+const playOne = () => {
+  muteAll();
 
   step[playingBeat].forEach((e) => {
     const currentNoteIndex = (e + getBaseIndex()) % 7;
@@ -46,45 +55,35 @@ const startPlaying = () => {
     playingCache[playingNote] = velocityAvg;
     Max.outlet("note", playingNote, velocityAvg);
   });
+};
+
+const startPlaying = () => {
+  playOne();
 
   playingTimer = setTimeout(() => {
     if (!transport) {
-      if (playingBeat < 15) playingBeat += 1;
+      if (playingBeat < stepLength - 1) playingBeat += 1;
       else playingBeat = 0;
     }
     startPlaying();
-  }, (60000 * beatUnit) / bpm);
+  }, (240000 * noteLength) / bpm);
 
   playing = true;
 };
 
 const stopPlaying = () => {
   clearTimeout(playingTimer);
-
-  for (const key in playingCache) {
-    Max.outlet("note", +key, 0);
-    delete playingCache[key];
-  }
-
+  muteAll();
   playing = false;
-};
-
-const setPlaying = () => {
-  const newNotes = Object.keys(notesCahce).length;
-  if (!newNotes) stopPlaying();
-  else if (!playing) {
-    if (!transport && newNotes) playingBeat = 0;
-    startPlaying();
-  }
 };
 
 const updateChord = () => {
   const allNotes = {};
   triad.forEach((e) => {
-    if (e !== "unknown") allNotes[e] = true;
+    if (e !== "unknown") allNotes[(e % 12) + 60] = true;
   });
   tensions.forEach((e) => {
-    if (e !== "unknown") allNotes[e] = true;
+    if (e !== "unknown") allNotes[(e % 12) + 60] = true;
   });
   chord = Object.keys(allNotes).sort((a, b) => +a - +b);
 };
@@ -95,11 +94,11 @@ Max.addHandler("bpm", (value) => {
 
 Max.addHandler("transport", (value) => {
   transport = !!value;
-  setPlaying();
 });
 
 Max.addHandler("tempo", (value) => {
   playingBeat = value;
+  if (Object.keys(notesCahce).length) playOne();
 });
 
 Max.addHandler("velocity", (value) => {
@@ -116,7 +115,14 @@ Max.addHandler("base", (value, velocity) => {
     base = value;
   } else delete notesCahce[value];
 
-  setPlaying();
+  if (transport) return;
+
+  const newNotes = Object.keys(notesCahce).length;
+  if (!newNotes) stopPlaying();
+  else if (!playing) {
+    if (!transport) playingBeat = 0;
+    startPlaying();
+  }
 });
 
 Max.addHandler("triadNumbers", (...numbers) => {
@@ -132,6 +138,8 @@ Max.addHandler("tensionNumbers", (...numbers) => {
 Max.addHandler("steps", (...value) => {
   if (value.length < 2) return;
 
+  step.length = stepLength;
+  step.fill(null);
   step.forEach((e, i) => {
     step[i] = [];
   });
@@ -140,9 +148,19 @@ Max.addHandler("steps", (...value) => {
   while (i < value.length) {
     const location = value[i] - 1;
     const note = value[i + 1];
-    step[location].push(note);
+    if (step[location]) step[location].push(note);
     i += 2;
   }
+});
+
+Max.addHandler("directions", (...numbers) => {});
+
+Max.addHandler("stepLength", (value) => {
+  stepLength = value;
+});
+
+Max.addHandler("noteLength", (value) => {
+  noteLength = 1 / value;
 });
 
 Max.outlet("load", 1);
