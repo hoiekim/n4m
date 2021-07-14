@@ -17,9 +17,14 @@ const notesCahce = {};
 let chord = [];
 
 let stepLength = 16;
-const step = new Array(stepLength).fill(null);
-step.forEach((e, i) => {
-  step[i] = [];
+
+let stepOn = new Array(stepLength).fill(null);
+stepOn.forEach((e, i) => {
+  stepOn[i] = [];
+});
+const stepOff = new Array(stepLength).fill(null);
+stepOff.forEach((e, i) => {
+  stepOff[i] = [];
 });
 
 let playing = false;
@@ -27,7 +32,7 @@ let playingBeat = 0;
 let playingTimer;
 const playingCache = {};
 
-const getBaseIndex = () => {
+const getScaleIndex = (note) => {
   let baseIndex = 0;
 
   scale.find((e, i) => {
@@ -36,7 +41,7 @@ const getBaseIndex = () => {
     return found;
   });
 
-  return baseIndex;
+  return (note + baseIndex) % 7;
 };
 
 const muteAll = () => {
@@ -47,18 +52,27 @@ const muteAll = () => {
 };
 
 const playOne = () => {
-  muteAll();
+  for (const key in playingCache) {
+    stepOff[playingBeat].find((e) => {
+      if (e === playingCache[key]) {
+        Max.outlet("note", +key, 0);
+        delete playingCache[key];
+        return true;
+      }
+    });
+  }
 
-  step[playingBeat].forEach((e) => {
-    const currentNoteIndex = (e + getBaseIndex()) % 7;
-    const playingNote = scale[currentNoteIndex];
-    playingCache[playingNote] = velocityAvg;
+  stepOn[playingBeat].forEach((e) => {
+    const scaleIndex = getScaleIndex(e);
+    const playingNote = scale[scaleIndex];
+    playingCache[playingNote] = e;
     Max.outlet("note", playingNote, velocityAvg);
   });
 };
 
 const startPlaying = () => {
   playOne();
+  Max.outlet("playingBeat", playingBeat);
 
   playingTimer = setTimeout(() => {
     if (!transport) {
@@ -120,7 +134,7 @@ Max.addHandler("base", (value, velocity) => {
   const newNotes = Object.keys(notesCahce).length;
   if (!newNotes) stopPlaying();
   else if (!playing) {
-    if (!transport) playingBeat = 0;
+    playingBeat = 0;
     startPlaying();
   }
 });
@@ -135,25 +149,79 @@ Max.addHandler("tensionNumbers", (...numbers) => {
   updateChord();
 });
 
-Max.addHandler("steps", (...value) => {
+Max.addHandler("stepOn", (...value) => {
   if (value.length < 2) return;
 
-  step.length = stepLength;
-  step.fill(null);
-  step.forEach((e, i) => {
-    step[i] = [];
+  const newStepOn = new Array(stepLength).fill(null);
+  newStepOn.forEach((e, i) => {
+    newStepOn[i] = [];
   });
 
   let i = 0;
   while (i < value.length) {
     const location = value[i] - 1;
     const note = value[i + 1];
-    if (step[location]) step[location].push(note);
+    if (newStepOn[location]) newStepOn[location].push(note);
     i += 2;
   }
+
+  newStepOn.find((e, i) => {
+    return e.find((f, j) => {
+      if (stepOn[i] && !stepOn[i].find((g) => f === g)) {
+        if (stepOff.raw) {
+          Max.outlet("stepOff", "clear");
+          Max.outlet("stepOff", "steps", ...stepOff.raw, i + 2, f);
+        } else Max.outlet("stepOff", "steps", i + 2, f);
+        return true;
+      }
+    });
+  });
+
+  stepOn.find((e, i) => {
+    return e.find((f, j) => {
+      if (newStepOn[i] && !newStepOn[i].find((g) => f === g)) {
+        if (stepOff.raw) {
+          let k = 0;
+          while (k < stepOff.raw.length) {
+            if (stepOff.raw[k] === i + 2 && stepOff.raw[k + 1] === f) {
+              stepOff.raw.splice(k, 2);
+              break;
+            }
+            k += 2;
+          }
+          Max.outlet("stepOff", "clear");
+          if (stepOff.raw.length) {
+            Max.outlet("stepOff", "steps", ...stepOff.raw);
+          } else Max.outlet("stepOff", "clear");
+        }
+        return true;
+      }
+    });
+  });
+
+  stepOn = newStepOn;
+  stepOn.raw = value;
 });
 
-Max.addHandler("directions", (...numbers) => {});
+Max.addHandler("stepOff", (...value) => {
+  if (value.length < 2) return;
+
+  stepOff.length = stepLength;
+  stepOff.fill(null);
+  stepOff.forEach((e, i) => {
+    stepOff[i] = [];
+  });
+
+  let i = 0;
+  while (i < value.length) {
+    const location = value[i] - 1;
+    const note = value[i + 1];
+    if (stepOff[location]) stepOff[location].push(note);
+    i += 2;
+  }
+
+  stepOff.raw = value;
+});
 
 Max.addHandler("stepLength", (value) => {
   stepLength = value;
