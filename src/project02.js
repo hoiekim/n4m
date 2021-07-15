@@ -51,7 +51,7 @@ const muteAll = () => {
   }
 };
 
-const playOne = () => {
+const muteOne = () => {
   for (const key in playingCache) {
     stepOff[playingBeat].find((e) => {
       if (e === playingCache[key]) {
@@ -61,9 +61,11 @@ const playOne = () => {
       }
     });
   }
+};
 
+const playOne = () => {
   stepOn[playingBeat].forEach((e) => {
-    const scaleIndex = getScaleIndex(e);
+    const scaleIndex = getScaleIndex(e - 1);
     const playingNote = scale[scaleIndex];
     playingCache[playingNote] = e;
     Max.outlet("note", playingNote, velocityAvg);
@@ -71,6 +73,7 @@ const playOne = () => {
 };
 
 const startPlaying = () => {
+  muteOne();
   playOne();
   Max.outlet("playingBeat", playingBeat);
 
@@ -112,6 +115,7 @@ Max.addHandler("transport", (value) => {
 
 Max.addHandler("tempo", (value) => {
   playingBeat = value;
+  muteOne();
   if (Object.keys(notesCahce).length) playOne();
 });
 
