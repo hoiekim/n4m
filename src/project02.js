@@ -27,6 +27,8 @@ stepOff.forEach((e, i) => {
   stepOff[i] = [];
 });
 
+let stepOctave = new Array(stepLength).fill(0);
+
 let playing = false;
 let playingBeat = 0;
 let playingTimer;
@@ -66,7 +68,8 @@ const muteOne = () => {
 const playOne = () => {
   stepOn[playingBeat].forEach((e) => {
     const scaleIndex = getScaleIndex(e - 1);
-    const playingNote = scale[scaleIndex];
+    const octaveOffset = stepOctave[playingBeat] * 12;
+    const playingNote = scale[scaleIndex] + octaveOffset;
     playingCache[playingNote] = e;
     Max.outlet("note", playingNote, velocityAvg);
   });
@@ -111,6 +114,7 @@ Max.addHandler("bpm", (value) => {
 
 Max.addHandler("transport", (value) => {
   transport = !!value;
+  stopPlaying();
 });
 
 Max.addHandler("tempo", (value) => {
@@ -225,6 +229,10 @@ Max.addHandler("stepOff", (...value) => {
   }
 
   stepOff.raw = value;
+});
+
+Max.addHandler("stepOctave", (...value) => {
+  stepOctave = value.map((e) => e - 4);
 });
 
 Max.addHandler("stepLength", (value) => {
