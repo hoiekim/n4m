@@ -18,10 +18,12 @@ let chord = [];
 
 let stepLength = 16;
 
+let stepOnMouseOver = [0, 0, 0];
 let stepOn = new Array(stepLength).fill(null);
 stepOn.forEach((e, i) => {
   stepOn[i] = [];
 });
+
 const stepOff = new Array(stepLength).fill(null);
 stepOff.forEach((e, i) => {
   stepOff[i] = [];
@@ -157,6 +159,10 @@ Max.addHandler("tensionNumbers", (...numbers) => {
   updateChord();
 });
 
+Max.addHandler("stepOnMouseOver", (...value) => {
+  stepOnMouseOver = value;
+});
+
 Max.addHandler("stepOn", (...value) => {
   if (value.length < 2) return;
 
@@ -168,44 +174,35 @@ Max.addHandler("stepOn", (...value) => {
   let i = 0;
   while (i < value.length) {
     const location = value[i] - 1;
-    const note = value[i + 1];
-    if (newStepOn[location]) newStepOn[location].push(note);
+    const height = value[i + 1];
+    if (newStepOn[location]) newStepOn[location].push(height);
     i += 2;
   }
 
-  newStepOn.find((e, i) => {
-    return e.find((f, j) => {
-      if (stepOn[i] && !stepOn[i].find((g) => f === g)) {
-        if (stepOff.raw) {
-          Max.outlet("stepOff", "clear");
-          Max.outlet("stepOff", "steps", ...stepOff.raw, i + 2, f);
-        } else Max.outlet("stepOff", "steps", i + 2, f);
-        return true;
-      }
-    });
-  });
+  const [location, height, boolean] = stepOnMouseOver;
 
-  stepOn.find((e, i) => {
-    return e.find((f, j) => {
-      if (newStepOn[i] && !newStepOn[i].find((g) => f === g)) {
-        if (stepOff.raw) {
-          let k = 0;
-          while (k < stepOff.raw.length) {
-            if (stepOff.raw[k] === i + 2 && stepOff.raw[k + 1] === f) {
-              stepOff.raw.splice(k, 2);
-              break;
-            }
-            k += 2;
-          }
-          Max.outlet("stepOff", "clear");
-          if (stepOff.raw.length) {
-            Max.outlet("stepOff", "steps", ...stepOff.raw);
-          } else Max.outlet("stepOff", "clear");
+  let nextLocation = location + 1;
+  if (nextLocation > stepLength) nextLocation = 1;
+
+  if (boolean) {
+    Max.outlet("stepOff", "steps", nextLocation, height);
+  } else {
+    const raw = stepOff.raw;
+
+    if (raw) {
+      let k = 0;
+      while (k < raw.length) {
+        if (raw[k] === nextLocation && raw[k + 1] === height) {
+          raw.splice(k, 2);
+          break;
         }
-        return true;
+        k += 2;
       }
-    });
-  });
+
+      Max.outlet("stepOff", "clear");
+      if (raw.length) Max.outlet("stepOff", "steps", ...raw);
+    }
+  }
 
   stepOn = newStepOn;
   stepOn.raw = value;
@@ -223,8 +220,8 @@ Max.addHandler("stepOff", (...value) => {
   let i = 0;
   while (i < value.length) {
     const location = value[i] - 1;
-    const note = value[i + 1];
-    if (stepOff[location]) stepOff[location].push(note);
+    const height = value[i + 1];
+    if (stepOff[location]) stepOff[location].push(height);
     i += 2;
   }
 
