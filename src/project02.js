@@ -16,10 +16,10 @@ const notesCahce = {};
 
 let chord = [];
 
-let stepLength = 16;
-
+let stepLength = 64;
 let stepOnMouseOver = [0, 0, 0];
-let stepOn = new Array(stepLength).fill(null);
+
+const stepOn = new Array(stepLength).fill(null);
 stepOn.forEach((e, i) => {
   stepOn[i] = [];
 });
@@ -166,16 +166,17 @@ Max.addHandler("stepOnMouseOver", (...value) => {
 Max.addHandler("stepOn", (...value) => {
   if (value.length < 2) return;
 
-  const newStepOn = new Array(stepLength).fill(null);
-  newStepOn.forEach((e, i) => {
-    newStepOn[i] = [];
+  stepOn.length = stepLength;
+  stepOn.fill(null);
+  stepOn.forEach((e, i) => {
+    stepOn[i] = [];
   });
 
   let i = 0;
   while (i < value.length) {
     const location = value[i] - 1;
     const height = value[i + 1];
-    if (newStepOn[location]) newStepOn[location].push(height);
+    if (stepOn[location]) stepOn[location].push(height);
     i += 2;
   }
 
@@ -187,25 +188,19 @@ Max.addHandler("stepOn", (...value) => {
   if (boolean) {
     Max.outlet("stepOff", "steps", nextLocation, height);
   } else {
-    const raw = stepOff.raw;
+    const raw = stepOff.reduce((acc1, hArr, i) => {
+      return acc1.concat(
+        hArr.reduce((acc2, h) => {
+          const l = i + 1;
+          if (l === nextLocation && h === height) return acc2;
+          else return acc2.concat([l, h]);
+        }, [])
+      );
+    }, []);
 
-    if (raw) {
-      let k = 0;
-      while (k < raw.length) {
-        if (raw[k] === nextLocation && raw[k + 1] === height) {
-          raw.splice(k, 2);
-          break;
-        }
-        k += 2;
-      }
-
-      Max.outlet("stepOff", "clear");
-      if (raw.length) Max.outlet("stepOff", "steps", ...raw);
-    }
+    Max.outlet("stepOff", "clear");
+    if (raw.length) Max.outlet("stepOff", "steps", ...raw);
   }
-
-  stepOn = newStepOn;
-  stepOn.raw = value;
 });
 
 Max.addHandler("stepOff", (...value) => {
@@ -224,8 +219,6 @@ Max.addHandler("stepOff", (...value) => {
     if (stepOff[location]) stepOff[location].push(height);
     i += 2;
   }
-
-  stepOff.raw = value;
 });
 
 Max.addHandler("stepOctave", (...value) => {
