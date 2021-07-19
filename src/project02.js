@@ -204,8 +204,6 @@ Max.addHandler("stepOn", (...value) => {
 });
 
 Max.addHandler("stepOff", (...value) => {
-  if (value.length < 2) return;
-
   stepOff.length = stepLength;
   stepOff.fill(null);
   stepOff.forEach((e, i) => {
@@ -213,7 +211,7 @@ Max.addHandler("stepOff", (...value) => {
   });
 
   let i = 0;
-  while (i < value.length) {
+  while (value.length > 1 && i < value.length) {
     const location = value[i] - 1;
     const height = value[i + 1];
     if (stepOff[location]) stepOff[location].push(height);
