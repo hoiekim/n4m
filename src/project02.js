@@ -1,4 +1,5 @@
 const Max = require("max-api");
+const { midiToAbsoluteNoteName } = require("../lib/chords");
 
 let bpm = 120;
 let noteLength = 1 / 4;
@@ -147,6 +148,15 @@ Max.addHandler("base", (value, velocity) => {
     playingBeat = 0;
     startPlaying();
   }
+
+  const stepNotes = new Array(7).fill(null);
+  stepNotes.forEach((e, i) => {
+    const scaleIndex = getScaleIndex(i);
+    stepNotes[i] = scale[scaleIndex];
+  });
+
+  const stepNoteNames = stepNotes.map((e) => midiToAbsoluteNoteName(e % 12));
+  Max.outlet("stepNoteNames", ...stepNoteNames);
 });
 
 Max.addHandler("triadNumbers", (...numbers) => {
