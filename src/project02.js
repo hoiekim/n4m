@@ -9,7 +9,7 @@ let velocityAvg = 63;
 let transport = false;
 let playMode = 0;
 
-let base;
+let bass;
 let triad = [];
 let tensions = [];
 let scale = [60, 62, 64, 65, 67, 69, 71];
@@ -39,17 +39,17 @@ let playingTimer;
 const playingCache = {};
 
 const getScaleIndex = (note) => {
-  let baseIndex = 0;
+  let bassIndex = 0;
 
   if (!playMode) {
     scale.find((e, i) => {
-      const found = base % 12 === e % 12;
-      if (found) baseIndex = i;
+      const found = bass % 12 === e % 12;
+      if (found) bassIndex = i;
       return found;
     });
   }
 
-  return (note + baseIndex) % 7;
+  return (note + bassIndex) % 7;
 };
 
 const muteAll = () => {
@@ -137,10 +137,10 @@ Max.addHandler("scale", (...value) => {
   scale = value.map((e) => e + 60);
 });
 
-Max.addHandler("base", (value, velocity) => {
+Max.addHandler("bass", (value, velocity) => {
   if (velocity) {
     notesCahce[value] = velocity;
-    base = value;
+    bass = value;
   } else delete notesCahce[value];
 
   if (transport) return;
@@ -246,6 +246,35 @@ Max.addHandler("noteLength", (value) => {
 
 Max.addHandler("playMode", (value) => {
   playMode = value;
+});
+
+Max.addHandler("legato", (value) => {
+  if (!value) return;
+
+  const newStepOff = new Array(stepLength);
+  newStepOff.fill(null);
+  newStepOff.forEach((e, i) => {
+    newStepOff[i] = [];
+  });
+
+  newStepOff[1] = stepOn.reduce((acc, e, i) => {
+    if (i && e.length) {
+      newStepOff[i + 1] = acc;
+      acc = [];
+    }
+    return acc.concat(e);
+  }, []);
+
+  const raw = newStepOff.reduce((acc1, hArr, i) => {
+    return acc1.concat(
+      hArr.reduce((acc2, h) => {
+        return acc2.concat([i, h]);
+      }, [])
+    );
+  }, []);
+
+  Max.outlet("stepOff", "clear");
+  if (raw.length) Max.outlet("stepOff", "steps", ...raw);
 });
 
 Max.outlet("load", 1);

@@ -9,7 +9,7 @@ const {
   midiToAbsoluteNoteName
 } = require("../lib/chords");
 
-let base;
+let bass;
 let triad = [];
 let safeNotes = [];
 let tension = [];
@@ -35,10 +35,10 @@ const outletScale = () => {
   Max.outlet("scaleNames", ...scale.map(midiToAbsoluteNoteName));
 };
 
-// Send base and triad outlet to max.
+// Send bass and triad outlet to max.
 const outletBaseTriad = (notes) => {
   const newBase = getBase(notes);
-  if (base !== newBase) {
+  if (bass !== newBase) {
     let velocitySum = 0;
     let length = 0;
     for (const key in notesCache) {
@@ -48,10 +48,10 @@ const outletBaseTriad = (notes) => {
     velocityAvg = velocitySum / length;
     Max.outlet("velocity", velocityAvg);
 
-    Max.outlet("base", newBase, velocityAvg);
-    Max.outlet("baseNumber", newBase);
-    Max.outlet("baseName", midiToNoteName(newBase));
-    Max.outlet("base", base, 0);
+    Max.outlet("bass", newBase, velocityAvg);
+    Max.outlet("bassNumber", newBase);
+    Max.outlet("bassName", midiToNoteName(newBase));
+    Max.outlet("bass", bass, 0);
 
     triad.forEach((e) => Max.outlet("triad", e, 0));
     triad = getTriad(newBase);
@@ -59,7 +59,7 @@ const outletBaseTriad = (notes) => {
     Max.outlet("triadNumbers", ...triad);
     Max.outlet("triadNames", ...triad.map(midiToNoteName));
 
-    base = newBase;
+    bass = newBase;
   }
 };
 
@@ -138,8 +138,8 @@ const outletTensions = (notes) => {
 const noteOffAll = () => {
   velocityAvg = 0;
   Max.outlet("velocity", velocityAvg);
-  Max.outlet("base", base, velocityAvg);
-  base = null;
+  Max.outlet("bass", bass, velocityAvg);
+  bass = null;
   tension.forEach((e) => Max.outlet("tension", e, velocityAvg));
   safeNotes.forEach((e) => Max.outlet("safeNotes", e, velocityAvg));
   triad.forEach((e) => Max.outlet("triad", e, velocityAvg));
