@@ -7,6 +7,7 @@ let noteLength = 1 / 4;
 let velocityAvg = 63;
 
 let transport = false;
+let playMode = 0;
 
 let base;
 let triad = [];
@@ -40,11 +41,13 @@ const playingCache = {};
 const getScaleIndex = (note) => {
   let baseIndex = 0;
 
-  scale.find((e, i) => {
-    const found = base % 12 === e % 12;
-    if (found) baseIndex = i;
-    return found;
-  });
+  if (!playMode) {
+    scale.find((e, i) => {
+      const found = base % 12 === e % 12;
+      if (found) baseIndex = i;
+      return found;
+    });
+  }
 
   return (note + baseIndex) % 7;
 };
@@ -239,6 +242,10 @@ Max.addHandler("stepLength", (value) => {
 
 Max.addHandler("noteLength", (value) => {
   noteLength = 1 / value;
+});
+
+Max.addHandler("playMode", (value) => {
+  playMode = value;
 });
 
 Max.outlet("load", 1);
