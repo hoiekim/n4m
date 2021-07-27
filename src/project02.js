@@ -277,4 +277,19 @@ Max.addHandler("legato", (value) => {
   if (raw.length) Max.outlet("stepOff", "steps", ...raw);
 });
 
+Max.addHandler("sustain", (value) => {
+  if (!value) return;
+
+  const raw = stepOn.reduce((acc1, hArr, i) => {
+    return acc1.concat(
+      hArr.reduce((acc2, h) => {
+        return acc2.concat([i + 1, h]);
+      }, [])
+    );
+  }, []);
+
+  Max.outlet("stepOff", "clear");
+  if (raw.length) Max.outlet("stepOff", "steps", ...raw);
+});
+
 Max.outlet("load", 1);
