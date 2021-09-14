@@ -38,7 +38,7 @@ let playingBeat = 0;
 let playingTimer;
 const playingCache = {};
 
-const getScaleIndex = (note) => {
+const getScaleIndex = (noteIndex) => {
   let bassIndex = 0;
 
   if (!playMode) {
@@ -49,7 +49,7 @@ const getScaleIndex = (note) => {
     });
   }
 
-  return (note + bassIndex) % 7;
+  return (noteIndex + bassIndex) % 7;
 };
 
 const muteAll = () => {
@@ -73,6 +73,7 @@ const muteOne = () => {
 
 const playOne = () => {
   stepOn[playingBeat].forEach((e) => {
+    if (typeof e !== "number") return
     const scaleIndex = getScaleIndex(e - 1);
     const octaveOffset = stepOctave[playingBeat] * 12;
     const playingNote = scale[scaleIndex] + octaveOffset;
