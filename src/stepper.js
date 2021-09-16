@@ -73,7 +73,7 @@ const muteOne = () => {
 
 const playOne = () => {
   stepOn[playingBeat].forEach((e) => {
-    if (typeof e !== "number") return
+    if (typeof e !== "number") return;
     const scaleIndex = getScaleIndex(e - 1);
     const octaveOffset = stepOctave[playingBeat] * 12;
     const playingNote = scale[scaleIndex] + octaveOffset;
@@ -178,8 +178,6 @@ Max.addHandler("stepOnMouseOver", (...value) => {
 });
 
 Max.addHandler("stepOn", (...value) => {
-  if (value.length < 2) return;
-
   stepOn.length = stepLength;
   stepOn.fill(null);
   stepOn.forEach((e, i) => {
