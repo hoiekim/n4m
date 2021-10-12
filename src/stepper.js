@@ -16,8 +16,6 @@ let scale = [60, 62, 64, 65, 67, 69, 71];
 
 const notesCahce = {};
 
-let chord = [];
-
 let stepLength = 64;
 let stepOnMouseOver = [0, 0, 0];
 
@@ -116,179 +114,247 @@ const updateChord = () => {
 };
 
 Max.addHandler("bpm", (value) => {
-  bpm = value;
+  try {
+    bpm = value;
+  } catch (err) {
+    console.error(err);
+  }
 });
 
 Max.addHandler("transport", (value) => {
-  transport = !!value;
-  stopPlaying();
+  try {
+    transport = !!value;
+    stopPlaying();
+  } catch (err) {
+    console.error(err);
+  }
 });
 
 Max.addHandler("tempo", (value) => {
-  playingBeat = value;
-  muteOne();
-  if (Object.keys(notesCahce).length) playOne();
+  try {
+    playingBeat = value;
+    muteOne();
+    if (Object.keys(notesCahce).length) playOne();
+  } catch (err) {
+    console.error(err);
+  }
 });
 
 Max.addHandler("velocity", (value) => {
-  velocityAvg = value;
+  try {
+    velocityAvg = value;
+  } catch (err) {
+    console.error(err);
+  }
 });
 
 Max.addHandler("scale", (...value) => {
-  scale = value.map((e) => e + 60);
+  try {
+    scale = value.map((e) => e + 60);
+  } catch (err) {
+    console.error(err);
+  }
 });
 
 Max.addHandler("bass", (value, velocity) => {
-  if (velocity) {
-    notesCahce[value] = velocity;
-    bass = value;
-  } else delete notesCahce[value];
+  try {
+    if (velocity) {
+      notesCahce[value] = velocity;
+      bass = value;
+    } else delete notesCahce[value];
 
-  if (transport) return;
+    if (transport) return;
 
-  const newNotes = Object.keys(notesCahce).length;
-  if (!newNotes) stopPlaying();
-  else if (!playing) {
-    playingBeat = 0;
-    startPlaying();
+    const newNotes = Object.keys(notesCahce).length;
+    if (!newNotes) stopPlaying();
+    else if (!playing) {
+      playingBeat = 0;
+      startPlaying();
+    }
+
+    const stepNotes = new Array(7).fill(null);
+    stepNotes.forEach((e, i) => {
+      const scaleIndex = getScaleIndex(i);
+      stepNotes[i] = scale[scaleIndex];
+    });
+
+    const stepNoteNames = stepNotes.map((e) => midiToAbsoluteNoteName(e % 12));
+    Max.outlet("stepNoteNames", ...stepNoteNames);
+  } catch (err) {
+    console.error(err);
   }
-
-  const stepNotes = new Array(7).fill(null);
-  stepNotes.forEach((e, i) => {
-    const scaleIndex = getScaleIndex(i);
-    stepNotes[i] = scale[scaleIndex];
-  });
-
-  const stepNoteNames = stepNotes.map((e) => midiToAbsoluteNoteName(e % 12));
-  Max.outlet("stepNoteNames", ...stepNoteNames);
 });
 
 Max.addHandler("triadNumbers", (...numbers) => {
-  triad = numbers;
-  updateChord();
+  try {
+    triad = numbers;
+    updateChord();
+  } catch (err) {
+    console.error(err);
+  }
 });
 
 Max.addHandler("tensionNumbers", (...numbers) => {
-  tensions = numbers;
-  updateChord();
+  try {
+    tensions = numbers;
+    updateChord();
+  } catch (err) {
+    console.error(err);
+  }
 });
 
 Max.addHandler("stepOnMouseOver", (...value) => {
-  stepOnMouseOver = value;
+  try {
+    stepOnMouseOver = value;
+  } catch (err) {
+    console.error(err);
+  }
 });
 
 Max.addHandler("stepOn", (...value) => {
-  stepOn.length = stepLength;
-  stepOn.fill(null);
-  stepOn.forEach((e, i) => {
-    stepOn[i] = [];
-  });
+  try {
+    stepOn.length = stepLength;
+    stepOn.fill(null);
+    stepOn.forEach((e, i) => {
+      stepOn[i] = [];
+    });
 
-  let i = 0;
-  while (i < value.length) {
-    const location = value[i] - 1;
-    const height = value[i + 1];
-    if (stepOn[location]) stepOn[location].push(height);
-    i += 2;
+    let i = 0;
+    while (i < value.length) {
+      const location = value[i] - 1;
+      const height = value[i + 1];
+      if (stepOn[location]) stepOn[location].push(height);
+      i += 2;
+    }
+
+    const [location, height, boolean] = stepOnMouseOver;
+
+    let nextLocation = location + 1;
+    if (nextLocation > stepLength) nextLocation = 1;
+
+    if (boolean) {
+      Max.outlet("stepOff", "steps", nextLocation, height);
+    } else {
+      const raw = stepOff.reduce((acc1, hArr, i) => {
+        return acc1.concat(
+          hArr.reduce((acc2, h) => {
+            const l = i + 1;
+            if (l === nextLocation && h === height) return acc2;
+            else return acc2.concat([l, h]);
+          }, [])
+        );
+      }, []);
+
+      Max.outlet("stepOff", "clear");
+      if (raw.length) Max.outlet("stepOff", "steps", ...raw);
+    }
+  } catch (err) {
+    console.error(err);
   }
+});
 
-  const [location, height, boolean] = stepOnMouseOver;
+Max.addHandler("stepOff", (...value) => {
+  try {
+    stepOff.length = stepLength;
+    stepOff.fill(null);
+    stepOff.forEach((e, i) => {
+      stepOff[i] = [];
+    });
 
-  let nextLocation = location + 1;
-  if (nextLocation > stepLength) nextLocation = 1;
+    let i = 0;
+    while (value.length > 1 && i < value.length) {
+      const location = value[i] - 1;
+      const height = value[i + 1];
+      if (stepOff[location]) stepOff[location].push(height);
+      i += 2;
+    }
+  } catch (err) {
+    console.error(err);
+  }
+});
 
-  if (boolean) {
-    Max.outlet("stepOff", "steps", nextLocation, height);
-  } else {
-    const raw = stepOff.reduce((acc1, hArr, i) => {
+Max.addHandler("stepOctave", (...value) => {
+  try {
+    stepOctave = value.map((e) => e - 4);
+  } catch (err) {
+    console.error(err);
+  }
+});
+
+Max.addHandler("stepLength", (value) => {
+  try {
+    stepLength = value;
+  } catch (err) {
+    console.error(err);
+  }
+});
+
+Max.addHandler("noteLength", (value) => {
+  try {
+    noteLength = 1 / value;
+  } catch (err) {
+    console.error(err);
+  }
+});
+
+Max.addHandler("playMode", (value) => {
+  try {
+    playMode = value;
+  } catch (err) {
+    console.error(err);
+  }
+});
+
+Max.addHandler("legato", (value) => {
+  try {
+    if (!value) return;
+
+    const newStepOff = new Array(stepLength);
+    newStepOff.fill(null);
+    newStepOff.forEach((e, i) => {
+      newStepOff[i] = [];
+    });
+
+    newStepOff[1] = stepOn.reduce((acc, e, i) => {
+      if (i && e.length) {
+        newStepOff[i + 1] = acc;
+        acc = [];
+      }
+      return acc.concat(e);
+    }, []);
+
+    const raw = newStepOff.reduce((acc1, hArr, i) => {
       return acc1.concat(
         hArr.reduce((acc2, h) => {
-          const l = i + 1;
-          if (l === nextLocation && h === height) return acc2;
-          else return acc2.concat([l, h]);
+          return acc2.concat([i, h]);
         }, [])
       );
     }, []);
 
     Max.outlet("stepOff", "clear");
     if (raw.length) Max.outlet("stepOff", "steps", ...raw);
+  } catch (err) {
+    console.error(err);
   }
-});
-
-Max.addHandler("stepOff", (...value) => {
-  stepOff.length = stepLength;
-  stepOff.fill(null);
-  stepOff.forEach((e, i) => {
-    stepOff[i] = [];
-  });
-
-  let i = 0;
-  while (value.length > 1 && i < value.length) {
-    const location = value[i] - 1;
-    const height = value[i + 1];
-    if (stepOff[location]) stepOff[location].push(height);
-    i += 2;
-  }
-});
-
-Max.addHandler("stepOctave", (...value) => {
-  stepOctave = value.map((e) => e - 4);
-});
-
-Max.addHandler("stepLength", (value) => {
-  stepLength = value;
-});
-
-Max.addHandler("noteLength", (value) => {
-  noteLength = 1 / value;
-});
-
-Max.addHandler("playMode", (value) => {
-  playMode = value;
-});
-
-Max.addHandler("legato", (value) => {
-  if (!value) return;
-
-  const newStepOff = new Array(stepLength);
-  newStepOff.fill(null);
-  newStepOff.forEach((e, i) => {
-    newStepOff[i] = [];
-  });
-
-  newStepOff[1] = stepOn.reduce((acc, e, i) => {
-    if (i && e.length) {
-      newStepOff[i + 1] = acc;
-      acc = [];
-    }
-    return acc.concat(e);
-  }, []);
-
-  const raw = newStepOff.reduce((acc1, hArr, i) => {
-    return acc1.concat(
-      hArr.reduce((acc2, h) => {
-        return acc2.concat([i, h]);
-      }, [])
-    );
-  }, []);
-
-  Max.outlet("stepOff", "clear");
-  if (raw.length) Max.outlet("stepOff", "steps", ...raw);
 });
 
 Max.addHandler("sustain", (value) => {
-  if (!value) return;
+  try {
+    if (!value) return;
 
-  const raw = stepOn.reduce((acc1, hArr, i) => {
-    return acc1.concat(
-      hArr.reduce((acc2, h) => {
-        return acc2.concat([i + 1, h]);
-      }, [])
-    );
-  }, []);
+    const raw = stepOn.reduce((acc1, hArr, i) => {
+      return acc1.concat(
+        hArr.reduce((acc2, h) => {
+          return acc2.concat([i + 1, h]);
+        }, [])
+      );
+    }, []);
 
-  Max.outlet("stepOff", "clear");
-  if (raw.length) Max.outlet("stepOff", "steps", ...raw);
+    Max.outlet("stepOff", "clear");
+    if (raw.length) Max.outlet("stepOff", "steps", ...raw);
+  } catch (err) {
+    console.error(err);
+  }
 });
 
 Max.outlet("load", 1);
