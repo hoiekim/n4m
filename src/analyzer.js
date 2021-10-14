@@ -194,3 +194,5 @@ Max.addHandler("sustain", (value) => {
     else outletTensions(notes);
   }
 });
+
+Max.outlet("load", 1);
