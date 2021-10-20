@@ -163,6 +163,9 @@ Max.addHandler("bass", (value, velocity) => {
       bass = value;
     } else delete notesCahce[value];
 
+    muteOne();
+    playOne();
+
     if (transport) return;
 
     const newNotes = Object.keys(notesCahce).length;
