@@ -7,9 +7,11 @@ let noteLength = 1 / 4;
 let velocityAvg = 63;
 
 let transport = false;
-let playMode = 0;
+let compactRange = false;
+let dynamicBass = false;
 
 let bass;
+let bassIndex;
 let triad = [];
 let tensions = [];
 let scale = [60, 62, 64, 65, 67, 69, 71];
@@ -36,19 +38,7 @@ let playingBeat = 0;
 let playingTimer;
 const playingCache = {};
 
-const getScaleIndex = (noteIndex) => {
-  let bassIndex = 0;
-
-  if (!playMode) {
-    scale.find((e, i) => {
-      const found = bass % 12 === e % 12;
-      if (found) bassIndex = i;
-      return found;
-    });
-  }
-
-  return (noteIndex + bassIndex) % 7;
-};
+const getScaleIndex = (noteIndex) => (noteIndex + bassIndex) % 7;
 
 const muteAll = () => {
   for (const key in playingCache) {
@@ -73,8 +63,13 @@ const playOne = () => {
   stepOn[playingBeat].forEach((e) => {
     if (typeof e !== "number") return;
     const scaleIndex = getScaleIndex(e - 1);
+    const bassNote = scale[bassIndex];
+    let playingNote = scale[scaleIndex];
+
+    const pitchCorrection = !compactRange && bassNote > playingNote ? 12 : 0;
     const octaveOffset = stepOctave[playingBeat] * 12;
-    const playingNote = scale[scaleIndex] + octaveOffset;
+    playingNote += pitchCorrection + octaveOffset;
+
     playingCache[playingNote] = e;
     Max.outlet("note", playingNote, velocityAvg);
   });
@@ -161,6 +156,14 @@ Max.addHandler("bass", (value, velocity) => {
     if (velocity) {
       notesCahce[value] = velocity;
       bass = value;
+
+      if (dynamicBass) {
+        scale.find((e, i) => {
+          const found = bass % 12 === e % 12;
+          if (found) bassIndex = i;
+          return found;
+        });
+      }
     } else delete notesCahce[value];
 
     muteOne();
@@ -300,9 +303,17 @@ Max.addHandler("noteLength", (value) => {
   }
 });
 
-Max.addHandler("playMode", (value) => {
+Max.addHandler("dynamicBass", (value) => {
   try {
-    playMode = value;
+    dynamicBass = !!value;
+  } catch (err) {
+    console.error(err);
+  }
+});
+
+Max.addHandler("compactRange", (value) => {
+  try {
+    compactRange = !!value;
   } catch (err) {
     console.error(err);
   }
