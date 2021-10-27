@@ -254,6 +254,8 @@ Max.addHandler("stepOn", (...value) => {
       Max.outlet("stepOff", "clear");
       if (raw.length) Max.outlet("stepOff", "steps", ...raw);
     }
+
+    muteAll();
   } catch (err) {
     console.error(err);
   }
