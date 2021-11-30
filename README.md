@@ -10,32 +10,29 @@ I'm discovering what we can do with `Node.js` + `Max` + `Ableton Live`. If you h
 
 ### Max effectors
 
-* `project01.amxd`
+`receiver` and `stepper` requires `anaylzer` to be running. They can be used in separated tracks though.
 
-  Ableton Max midi effector that detects key inputs, analyzes chords and send them to respectively base, triad and tension.
+* `analyzer.amxd`
 
-* `project01_receiver_base.amxd`
+  Ableton Max midi effector that detects key inputs, analyzes chords and send them to respectively bass, triad and tension.
 
-  Ableton Max midi effector that receives base note sent from `project01.amxd`.
+* `receiver.amxd`
 
-* `project01_receiver_triad.amxd`
+  Ableton Max midi effector that receives analyzed notes sent from `analyzer`.
 
-  Ableton Max midi effector that receives triad notes sent from `project01.amxd`.
+* `stepper.amxd`
 
-* `project01_receiver_tension.amxd`
-
-  Ableton Max midi effector that receives tension notes sent from `project01.amxd`.
-
-* `project01_receiver_triad_tension.amxd`
-
-  Ableton Max midi effector that receives triad and tension notes sent from `project01.amxd`.
-
+  Ableton Max midi effector that receives bass note sent from `analyzer` and plays according to user-designed grid.
 
 ### Javascript
 
-* `index.js`
+* `analyzer.js`
 
-  Main code that powers `project01.amxd`.
+  Main code that powers `anaylzer.amxd`.
+
+* `stepper.js`
+
+  Main code that powers `stepper.amxd`.
 
 * `lib/chords.js`
 
