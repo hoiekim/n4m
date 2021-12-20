@@ -1,6 +1,6 @@
 const Max = require("max-api");
 const {
-  getBase,
+  getBass,
   scale,
   setScale,
   addNoteToScale,
@@ -36,30 +36,21 @@ const outletScale = () => {
 };
 
 // Send bass and triad outlet to max.
-const outletBaseTriad = (notes) => {
-  const newBase = getBase(notes);
-  if (bass !== newBase) {
-    let velocitySum = 0;
-    let length = 0;
-    for (const key in notesCache) {
-      velocitySum += notesCache[key];
-      length++;
-    }
-    velocityAvg = velocitySum / length;
-    Max.outlet("velocity", velocityAvg);
-
-    Max.outlet("bass", newBase, velocityAvg);
-    Max.outlet("bassNumber", newBase);
-    Max.outlet("bassName", midiToNoteName(newBase));
+const outletBassTriad = (notes) => {
+  const newBass = getBass(notes);
+  if (bass !== newBass) {
+    Max.outlet("bass", newBass, velocityAvg);
+    Max.outlet("bassNumber", newBass);
+    Max.outlet("bassName", midiToNoteName(newBass));
     Max.outlet("bass", bass, 0);
 
     triad.forEach((e) => Max.outlet("triad", e, 0));
-    triad = getTriad(newBase);
+    triad = getTriad(newBass);
     triad.forEach((e) => Max.outlet("triad", e, velocityAvg));
     Max.outlet("triadNumbers", ...triad);
     Max.outlet("triadNames", ...triad.map(midiToNoteName));
 
-    bass = newBase;
+    bass = newBass;
   }
 };
 
@@ -134,6 +125,19 @@ const outletTensions = (notes) => {
   else tension = newTension;
 };
 
+const outletVelocity = () => {
+  let velocitySum = 0;
+  let length = 0;
+
+  for (const key in notesCache) {
+    velocitySum += notesCache[key];
+    length++;
+  }
+
+  velocityAvg = velocitySum / length;
+  Max.outlet("velocity", velocityAvg);
+};
+
 // Note off all notes.
 const noteOffAll = () => {
   velocityAvg = 0;
@@ -150,15 +154,17 @@ Max.addHandler("key", (note, velocity) => {
   if (!velocity) {
     // If input is note-off input:
     delete notesCache[note];
+    outletVelocity();
     const notes = getPlayedNotes();
     if (!notes.length && !sustain) noteOffAll();
     else {
       outletTensions(notes);
-      if (notes[0] < 48) outletBaseTriad(notes);
+      if (notes[0] < 48) outletBassTriad(notes);
     }
   } else {
     // If input is note-on input:
     notesCache[note] = velocity;
+    outletVelocity();
 
     if (!scaleLock) {
       // Update scale if scaleLock is not active.
@@ -167,8 +173,7 @@ Max.addHandler("key", (note, velocity) => {
     }
 
     const notes = getPlayedNotes();
-
-    outletBaseTriad(notes);
+    if (!sustain) outletBassTriad(notes);
     outletTensions(notes);
   }
 });
