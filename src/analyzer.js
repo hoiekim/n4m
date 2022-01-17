@@ -196,7 +196,10 @@ Max.addHandler("sustain", (value) => {
     sustain = false;
     const notes = getPlayedNotes();
     if (!notes.length) noteOffAll();
-    else outletTensions(notes);
+    else {
+      outletBassTriad(notes);
+      outletTensions(notes);
+    }
   }
 });
 
