@@ -159,7 +159,7 @@ Max.addHandler("key", (note, velocity) => {
     if (!notes.length && !sustain) noteOffAll();
     else {
       outletTensions(notes);
-      if (notes[0] < 48) outletBassTriad(notes);
+      if (notes[0] < 47) outletBassTriad(notes);
     }
   } else {
     // If input is note-on input:
