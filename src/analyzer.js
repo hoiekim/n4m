@@ -38,20 +38,18 @@ const outletScale = () => {
 // Send bass and triad outlet to max.
 const outletBassTriad = (notes) => {
   const newBass = getBass(notes);
-  if (bass !== newBass) {
-    Max.outlet("bass", newBass, velocityAvg);
-    Max.outlet("bassNumber", newBass);
-    Max.outlet("bassName", midiToNoteName(newBass));
-    Max.outlet("bass", bass, 0);
+  Max.outlet("bass", bass, 0);
+  Max.outlet("bass", newBass, velocityAvg);
+  Max.outlet("bassNumber", newBass);
+  Max.outlet("bassName", midiToNoteName(newBass));
 
-    triad.forEach((e) => Max.outlet("triad", e, 0));
-    triad = getTriad(newBass);
-    triad.forEach((e) => Max.outlet("triad", e, velocityAvg));
-    Max.outlet("triadNumbers", ...triad);
-    Max.outlet("triadNames", ...triad.map(midiToNoteName));
+  triad.forEach((e) => Max.outlet("triad", e, 0));
+  triad = getTriad(newBass);
+  triad.forEach((e) => Max.outlet("triad", e, velocityAvg));
+  Max.outlet("triadNumbers", ...triad);
+  Max.outlet("triadNames", ...triad.map(midiToNoteName));
 
-    bass = newBass;
-  }
+  bass = newBass;
 };
 
 // Send tension and safeNotes outlet to max.

@@ -1,7 +1,7 @@
 const Max = require("max-api");
 const { midiToNoteName, fitNoteToChord } = require("../lib/chords");
 
-let bass;
+let bass = 0;
 let scale = [0, 2, 4, 5, 7, 9, 11];
 let velocityAvg = 63;
 
@@ -44,24 +44,26 @@ Max.addHandler("velocity", (value) => {
 
 // Detect key input and analyze chords.
 Max.addHandler("key", (note, velocity) => {
-  try {
-    if (!velocity) {
-      notesCache[note].forEach((e) => Max.outlet("key", e, 0));
-      delete notesCache[note];
-    } else {
-      const adaptedNote = translate(note);
-      const adjustedVelocity = (velocity + velocityAvg) / 2;
-      Max.outlet("key", adaptedNote, adjustedVelocity);
-      if (notesCache[note]) notesCache[note].push([adaptedNote, velocity]);
-      else notesCache[note] = [adaptedNote, velocity];
+  setTimeout(() => {
+    try {
+      if (!velocity) {
+        notesCache[note].forEach((e) => Max.outlet("key", e, 0));
+        delete notesCache[note];
+      } else {
+        const adaptedNote = translate(note);
+        const adjustedVelocity = (velocity + velocityAvg) / 2;
+        Max.outlet("key", adaptedNote, adjustedVelocity);
+        if (notesCache[note]) notesCache[note].push([adaptedNote, velocity]);
+        else notesCache[note] = [adaptedNote, velocity];
+      }
+
+      const inputNotes = Object.keys(notesCache);
+      outputNotesAsNames("inputNames", inputNotes);
+
+      const outputNotes = inputNotes.map(translate);
+      outputNotesAsNames("outputNames", outputNotes);
+    } catch (err) {
+      console.error(err);
     }
-
-    const inputNotes = Object.keys(notesCache);
-    outputNotesAsNames("inputNames", inputNotes);
-
-    const outputNotes = inputNotes.map(translate);
-    outputNotesAsNames("outputNames", outputNotes);
-  } catch (err) {
-    console.error(err);
-  }
+  }, 5);
 });
