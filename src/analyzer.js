@@ -38,8 +38,8 @@ const outletScale = () => {
 // Send bass and triad outlet to max.
 const outletBassTriad = (notes) => {
   const newBass = getBass(notes);
-  Max.outlet("bass", bass, 0);
   Max.outlet("bass", newBass, velocityAvg);
+  if (bass !== newBass) Max.outlet("bass", bass, 0);
   Max.outlet("bassNumber", newBass);
   Max.outlet("bassName", midiToNoteName(newBass));
 
