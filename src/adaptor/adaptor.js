@@ -65,5 +65,5 @@ Max.addHandler("key", (note, velocity) => {
     } catch (err) {
       console.error(err);
     }
-  }, 5);
+  }, 30);
 });
