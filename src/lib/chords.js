@@ -1,10 +1,10 @@
 const { findIndex } = require("./array");
 
-const getBass = (notes) => {
+const getBass = (notes, bottom = 47) => {
   const lowKey = notes[0];
   let bass;
 
-  if (lowKey >= 47) {
+  if (lowKey >= bottom) {
     const basses = {};
 
     let i = 0;
@@ -86,20 +86,7 @@ const getTriad = (bass) => {
   return triad;
 };
 
-const noteNames = [
-  "C",
-  "C#",
-  "D",
-  "D#",
-  "E",
-  "F",
-  "F#",
-  "G",
-  "G#",
-  "A",
-  "A#",
-  "B"
-];
+const noteNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
 
 const midiToNoteName = (midi) => {
   let octave = -1;
@@ -126,7 +113,7 @@ const midiToScaleIndexMap = {
   8: 4,
   9: 5,
   10: 5,
-  11: 6
+  11: 6,
 };
 
 const fitNoteToChord = (note, scale, bass) => {
@@ -136,9 +123,7 @@ const fitNoteToChord = (note, scale, bass) => {
   try {
     const bassIndex = findIndex(scale, bass % 12);
     const clonedScale = [...scale];
-    const offsetScale = clonedScale
-      .splice(bassIndex, scale.length)
-      .concat(clonedScale);
+    const offsetScale = clonedScale.splice(bassIndex, scale.length).concat(clonedScale);
     const tonic = offsetScale[0];
     const incrementalScale = offsetScale.map((e) => {
       let f = e;
@@ -160,5 +145,5 @@ module.exports = {
   getTriad,
   midiToNoteName,
   midiToAbsoluteNoteName,
-  fitNoteToChord
+  fitNoteToChord,
 };

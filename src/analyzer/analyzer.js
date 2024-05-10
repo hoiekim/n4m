@@ -6,9 +6,10 @@ const {
   addNoteToScale,
   getTriad,
   midiToNoteName,
-  midiToAbsoluteNoteName
+  midiToAbsoluteNoteName,
 } = require("../lib/chords");
 
+let bottom = 47;
 let bass;
 let triad = [];
 let safeNotes = [];
@@ -37,7 +38,7 @@ const outletScale = () => {
 
 // Send bass and triad outlet to max.
 const outletBassTriad = (notes) => {
-  const newBass = getBass(notes);
+  const newBass = getBass(notes, bottom);
   Max.outlet("bass", newBass, velocityAvg);
   if (bass !== newBass) Max.outlet("bass", bass, 0);
   Max.outlet("bassNumber", newBass);
@@ -74,8 +75,7 @@ const outletTensions = (notes) => {
 
   // Play updated safeNotes.
   newSafeNotes.forEach((e) => {
-    if (!safeNotes.find((f) => e === f))
-      Max.outlet("safeNotes", e, velocityAvg);
+    if (!safeNotes.find((f) => e === f)) Max.outlet("safeNotes", e, velocityAvg);
   });
 
   // Display safeNotes with note names.
@@ -199,6 +199,11 @@ Max.addHandler("sustain", (value) => {
       outletTensions(notes);
     }
   }
+});
+
+// Detect bottom input.
+Max.addHandler("bottom", (value) => {
+  bottom = value;
 });
 
 Max.outlet("load", 1);
